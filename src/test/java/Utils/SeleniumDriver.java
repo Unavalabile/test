@@ -10,6 +10,7 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class SeleniumDriver {
@@ -19,12 +20,12 @@ public class SeleniumDriver {
             "/Users/veniamin/Downloads/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing";
 
     /**
-     * Implicit rulează pe un browser remote (Selenoid sau Selenium Grid).
+     * Implicit rulează pe un browser remote (Selenium Grid sau Selenoid).
      *   -Dremote=false         -> Chrome local
-     *   -Dheadless=true        -> Chrome local fără fereastră (folosit în GitHub Actions)
+     *   -Dheadless=true        -> Chrome local fără fereastră
      *   -Dselenoid.url=...     -> adresa hub-ului (implicit http://127.0.0.1:4444/wd/hub)
-     *   -Dbrowser.version=...  -> versiunea browserului (implicit 128.0 pentru Selenoid;
-     *                             pentru Selenium Grid se dă gol: -Dbrowser.version=)
+     *   -Dbrowser.version=...  -> versiunea browserului (implicit gol = cea implicită a hub-ului;
+     *                             pentru Selenoid se poate da de ex. 128.0)
      */
     public static WebDriver getDriver() {
         return Boolean.parseBoolean(System.getProperty("remote", "true"))
@@ -57,7 +58,7 @@ public class SeleniumDriver {
     public static RemoteWebDriver getRemoteDriver() {
         ChromeOptions options = new ChromeOptions();
 
-        String version = System.getProperty("browser.version", "128.0");
+        String version = System.getProperty("browser.version", "");
         if (!version.isBlank()) {
             options.setCapability("browserVersion", version);
         }
@@ -66,6 +67,7 @@ public class SeleniumDriver {
         Map<String, Object> selenoidOptions = new HashMap<>();
         selenoidOptions.put("name", "demoqa form test");
         selenoidOptions.put("sessionTimeout", "15m");
+        selenoidOptions.put("env", List.of("TZ=UTC"));
         selenoidOptions.put("enableVideo", false);
         selenoidOptions.put("enableVNC", true);
         options.setCapability("selenoid:options", selenoidOptions);

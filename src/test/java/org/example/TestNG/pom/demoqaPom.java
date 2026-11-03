@@ -2,8 +2,10 @@ package org.example.TestNG.pom;
 
 import Utils.WaitUtils;
 import org.openqa.selenium.By;
+import org.openqa.selenium.ElementClickInterceptedException;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -12,6 +14,7 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 
 public class demoqaPom {
     private static final By RESULT_TITLE = By.id("example-modal-sizes-title-lg");
+    private static final By BIRTHDAY = By.id("dateOfBirthInput");
 
     private final WebDriver driver;
     private final JavascriptExecutor js;
@@ -49,6 +52,7 @@ public class demoqaPom {
     public void closeAdvert() {
         removeByXpath("//*[@id='Ad.Plus-970x250-2']");
         removeByXpath("//footer");
+        removeByXpath("//*[@id='fixedban']");
     }
 
     private void removeByXpath(String xpath) {
@@ -61,7 +65,17 @@ public class demoqaPom {
     }
 
     public void scrollToElement(WebElement element) {
-        js.executeScript("arguments[0].scrollIntoView(true);", element);
+        js.executeScript("arguments[0].scrollIntoView({block:'center'});", element);
+    }
+
+    // Click normal; dacă e acoperit de un banner, click prin JavaScript
+    private void safeClick(WebElement element) {
+        scrollToElement(element);
+        try {
+            element.click();
+        } catch (ElementClickInterceptedException e) {
+            js.executeScript("arguments[0].click();", element);
+        }
     }
 
     public void setFirstName(String value) {
@@ -80,7 +94,9 @@ public class demoqaPom {
     }
 
     public void setGender(String value) {
-        driver.findElement(By.xpath("//*[@id='genterWrapper']//*[text()='" + value + "']")).click();
+        WebElement gender = driver.findElement(
+                By.xpath("//*[@id='genterWrapper']//*[text()='" + value + "']"));
+        safeClick(gender);
     }
 
     public void setUserNumber(String value) {
@@ -88,13 +104,22 @@ public class demoqaPom {
         userNumber.sendKeys(value);
     }
 
-    // Nu depinde de sistemul de operare (macOS / Windows / Linux din Selenoid)
+    // Câmpul de dată este re-randat de React, așa că îl căutăm din nou la fiecare pas
+    // și repetăm dacă devine "stale". Nu depinde de sistemul de operare.
     public void setBirthday(String value) {
-        WebElement field = WaitUtils.explicitWait(driver,
-                ExpectedConditions.visibilityOfElementLocated(By.id("dateOfBirthInput")), 10);
-        field.sendKeys(Keys.END, Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
-        field.sendKeys(value);
-        field.sendKeys(Keys.ENTER);
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                WaitUtils.explicitWait(driver, ExpectedConditions.elementToBeClickable(BIRTHDAY), 10).click();
+                driver.findElement(BIRTHDAY).sendKeys(Keys.END, Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
+                driver.findElement(BIRTHDAY).sendKeys(value);
+                driver.findElement(BIRTHDAY).sendKeys(Keys.ENTER);
+                return;
+            } catch (StaleElementReferenceException e) {
+                if (attempt == 3) {
+                    throw e;
+                }
+            }
+        }
     }
 
     public void addSubject(String value) {
@@ -104,8 +129,7 @@ public class demoqaPom {
 
     public void addHobby(String value) {
         WebElement hobby = driver.findElement(By.xpath("//*[@id='hobbiesWrapper']//*[text()='" + value + "']"));
-        scrollToElement(hobby);
-        hobby.click();
+        safeClick(hobby);
     }
 
     public void setState(String value) {
@@ -126,8 +150,7 @@ public class demoqaPom {
     }
 
     public void clickSubmit() {
-        scrollToElement(submit);
-        submit.click();
+        safeClick(submit);
     }
 
     public String getResultTitle() {

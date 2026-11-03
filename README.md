@@ -1,11 +1,19 @@
 # test
 
-Selenium + TestNG (Page Object) pentru formularul demoqa.
+Selenium + TestNG (Page Object) pentru formularul demoqa. Implicit rulează pe un browser **remote**.
 
 ```bash
-docker compose -f docker-compose.grid.yml up -d        # pornește browserul remote
-mvn clean test -Dbrowser.version= -Dselenoid.url=http://localhost:4444/wd/hub
+# remote (implicit)
+docker compose -f docker-compose.grid.yml up -d     # Selenium standalone (Mac Apple Silicon ok)
+mvn clean test -Dselenoid.url=http://localhost:4444/wd/hub
 
-mvn clean test -Dremote=false                          # Chrome local
-mvn clean test -Dremote=false -Dheadless=true          # local, fără fereastră
+# sau Selenoid
+docker compose up -d
+mvn clean test -Dbrowser.version=128.0
+
+# Chrome local pe Mac
+mvn clean test -Dremote=false
+mvn clean test -Dremote=false -Dheadless=true
 ```
+
+Proprietăți: `-Dremote`, `-Dheadless`, `-Dselenoid.url`, `-Dbrowser.version`, `-Dchrome.binary`, `-Dkeep.open`.

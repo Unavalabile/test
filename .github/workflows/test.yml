@@ -9,7 +9,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+
+    # Remote browser: Selenium standalone Chromium as a service container
+    services:
+      selenium:
+        image: selenium/standalone-chromium:latest
+        ports:
+          - 4444:4444
+        options: >-
+          --shm-size=2g
+          --health-cmd "curl -sf http://localhost:4444/wd/hub/status || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
     steps:
       - uses: actions/checkout@v5
@@ -20,9 +33,18 @@ jobs:
           java-version: "21"
           cache: maven
 
-      # Chrome is preinstalled on ubuntu-latest; Selenium Manager downloads the matching driver.
-      - name: Run tests (local headless Chrome)
-        run: mvn -B clean test -Dremote=false -Dheadless=true
+      - name: Wait for Selenium
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:4444/wd/hub/status | grep -q '"ready": *true'; then
+              echo "Selenium is ready"; exit 0
+            fi
+            sleep 2
+          done
+          echo "Selenium did not become ready"; exit 1
+
+      - name: Run tests (remote Selenium)
+        run: mvn -B clean test -Dremote=true -Dselenoid.url=http://localhost:4444/wd/hub
 
       - name: Upload test reports
         if: always()
