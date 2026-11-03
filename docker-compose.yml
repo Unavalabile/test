@@ -1,2 +1,33 @@
+networks:
+  selenoid:
+    name: selenoid
+    driver: bridge
+
 services:
-  
+  selenoid:
+    image: aerokube/selenoid:latest-release
+    networks:
+      - selenoid
+    volumes:
+      - "./config:/etc/selenoid"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./video:/opt/selenoid/video"
+      - "./logs:/opt/selenoid/logs"
+    environment:
+      - DOCKER_API_VERSION=1.45
+      # Calea ABSOLUTĂ a folderului video de pe calculatorul tău (setează VIDEO_DIR în .env pe Windows)
+      - OVERRIDE_VIDEO_OUTPUT_DIR=${VIDEO_DIR:-${PWD}/video}
+    command: ["-conf", "/etc/selenoid/browsers.json", "-video-output-dir", "/opt/selenoid/video", "-log-output-dir", "/opt/selenoid/logs", "-container-network", "selenoid"]
+    shm_size: "2gb"
+    ports:
+      - "4444:4444"
+
+  selenoid-ui:
+    image: aerokube/selenoid-ui
+    networks:
+      - selenoid
+    depends_on:
+      - selenoid
+    ports:
+      - "8080:8080"
+    command: ["--selenoid-uri", "http://selenoid:4444"]

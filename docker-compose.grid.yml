@@ -1,0 +1,10 @@
+# Selenium standalone (merge și pe Mac cu Apple Silicon)
+#   docker compose -f docker-compose.grid.yml up -d
+#   vizualizare live: http://localhost:7900 (parola: secret)
+services:
+  selenium:
+    image: selenium/standalone-chromium:latest
+    shm_size: "2gb"
+    ports:
+      - "4444:4444"
+      - "7900:7900"

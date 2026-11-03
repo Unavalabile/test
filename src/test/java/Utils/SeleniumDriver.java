@@ -6,17 +6,30 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
+import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-
 public class SeleniumDriver {
 
+    // Chrome for Testing de pe Mac; se poate suprascrie cu -Dchrome.binary="..."
     private static final String CHROME_BINARY =
             "/Users/veniamin/Downloads/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing";
+
+    /**
+     * Implicit rulează pe un browser remote (Selenoid sau Selenium Grid).
+     *   -Dremote=false         -> Chrome local
+     *   -Dheadless=true        -> Chrome local fără fereastră
+     *   -Dselenoid.url=...     -> adresa hub-ului (implicit http://127.0.0.1:4444/wd/hub)
+     *   -Dbrowser.version=...  -> versiunea browserului (implicit 128.0 pentru Selenoid;
+     *                             pentru Selenium Grid se dă gol: -Dbrowser.version=)
+     */
+    public static WebDriver getDriver() {
+        return Boolean.parseBoolean(System.getProperty("remote", "true"))
+                ? getRemoteDriver() : getLocalDriver();
+    }
 
     public static WebDriver getAutoDriver() {
         WebDriverManager.chromedriver().setup();
@@ -25,34 +38,38 @@ public class SeleniumDriver {
 
     public static WebDriver getLocalDriver() {
         ChromeOptions options = new ChromeOptions();
-        options.setBinary(CHROME_BINARY);
+        String binary = System.getProperty("chrome.binary", CHROME_BINARY);
+        if (new File(binary).exists()) {
+            options.setBinary(binary);
+        }
         options.addArguments("--remote-allow-origins=*");
+        if (Boolean.getBoolean("headless")) {
+            options.addArguments("--headless=new", "--no-sandbox", "--window-size=1920,1080");
+        }
         return new ChromeDriver(options);
     }
 
     public static RemoteWebDriver getRemoteDriver() {
         ChromeOptions options = new ChromeOptions();
-        options.setCapability("browserVersion", "128.0");
 
+        String version = System.getProperty("browser.version", "128.0");
+        if (!version.isBlank()) {
+            options.setCapability("browserVersion", version);
+        }
+
+        // Opțiuni specifice Selenoid (Selenium Grid le ignoră)
         Map<String, Object> selenoidOptions = new HashMap<>();
-        selenoidOptions.put("name", "Test badge...");
+        selenoidOptions.put("name", "demoqa form test");
         selenoidOptions.put("sessionTimeout", "15m");
-        selenoidOptions.put("env", new ArrayList<String>() {{
-            add("TZ=UTC");
-        }});
-        selenoidOptions.put("enableVideo", true);
+        selenoidOptions.put("enableVideo", false);
         selenoidOptions.put("enableVNC", true);
-        selenoidOptions.put("enableLog", true);
-        selenoidOptions.put("noSandbox", true);
-        selenoidOptions.put("headless", true);
         options.setCapability("selenoid:options", selenoidOptions);
 
-        RemoteWebDriver remoteDriver = null;
+        String hub = System.getProperty("selenoid.url", "http://127.0.0.1:4444/wd/hub");
         try {
-            remoteDriver = new RemoteWebDriver(URI.create("http://127.0.0.1:4444/wd/hub").toURL(), options);
+            return new RemoteWebDriver(URI.create(hub).toURL(), options);
         } catch (MalformedURLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("URL hub invalid: " + hub, e);
         }
-        return remoteDriver;
     }
 }
