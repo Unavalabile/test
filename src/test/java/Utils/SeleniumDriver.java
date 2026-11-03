@@ -21,7 +21,7 @@ public class SeleniumDriver {
     /**
      * Implicit rulează pe un browser remote (Selenoid sau Selenium Grid).
      *   -Dremote=false         -> Chrome local
-     *   -Dheadless=true        -> Chrome local fără fereastră
+     *   -Dheadless=true        -> Chrome local fără fereastră (folosit în GitHub Actions)
      *   -Dselenoid.url=...     -> adresa hub-ului (implicit http://127.0.0.1:4444/wd/hub)
      *   -Dbrowser.version=...  -> versiunea browserului (implicit 128.0 pentru Selenoid;
      *                             pentru Selenium Grid se dă gol: -Dbrowser.version=)
@@ -44,7 +44,12 @@ public class SeleniumDriver {
         }
         options.addArguments("--remote-allow-origins=*");
         if (Boolean.getBoolean("headless")) {
-            options.addArguments("--headless=new", "--no-sandbox", "--window-size=1920,1080");
+            options.addArguments(
+                    "--headless=new",
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--window-size=1920,1080");
         }
         return new ChromeDriver(options);
     }
